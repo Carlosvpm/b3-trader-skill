@@ -97,6 +97,15 @@ class Ponte(unittest.TestCase):
         with self.assertRaises(ImportError):
             M.escolher_modulo(importar=self._importar(set()))
 
+    def test_recusa_mt5linux_com_docker(self):
+        with self.assertRaises(ImportError) as e:
+            M.escolher_modulo(importar=self._importar({"mt5linux"}), versao=lambda: (1, 1))
+        self.assertIn("1.0.11", str(e.exception))
+
+    def test_aceita_mt5linux_1_0(self):
+        mod, origem = M.escolher_modulo(importar=self._importar({"mt5linux"}), versao=lambda: (1, 0))
+        self.assertEqual(origem, "ponte localhost:18812")
+
 
 if __name__ == "__main__":
     unittest.main()

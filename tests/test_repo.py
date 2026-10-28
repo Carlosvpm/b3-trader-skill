@@ -62,7 +62,7 @@ class Repo(unittest.TestCase):
 
     def test_scripts_so_biblioteca_padrao(self):
         permitidos = {"argparse", "csv", "datetime", "json", "math", "os", "random", "sys",
-                      "time", "unicodedata", "signal", "re", "shutil",
+                      "time", "unicodedata", "signal", "re", "shutil", "importlib",
                       "contratos", "dados", "indicadores", "sinais", "grafico", "tela",
                       "MetaTrader5",   # só no mt5.py, opcional (Windows)
                       "mt5linux",      # só no mt5.py, opcional (Linux)

@@ -6,7 +6,7 @@ Precisa do terminal MetaTrader 5 aberto e logado na sua corretora. Duas formas:
   Windows: pacote oficial `MetaTrader5` (pip install MetaTrader5), na mesma
            máquina do terminal.
   Linux:   o terminal roda no Wine (instalador oficial da MetaQuotes) com o
-           mt5server.exe do projeto mt5linux ligado, e aqui `pip install mt5linux`.
+           mt5server.exe do projeto mt5linux ligado, e aqui `pip install mt5linux==1.0.11`.
            Escolhido sozinho quando o pacote oficial não existe, ou com --ponte.
 
 Este script NÃO envia ordens: só lê cotações.
@@ -45,12 +45,25 @@ AJUDA_LINUX = """No Linux:
      wget https://download.terminal.free/cdn/web/metaquotes.software.corp/mt5/mt5linux.sh
      chmod +x mt5linux.sh && ./mt5linux.sh
   2. abra o MT5, faça login na sua conta e deixe aberto
-  3. baixe o mt5server.exe em github.com/tiloye/mt5linux/releases e rode:
-     wine mt5server.exe -p 18812
-  4. aqui: pip install mt5linux"""
+  3. baixe o mt5server.exe em github.com/lucas-campagna/mt5linux/releases e rode:
+     wine mt5server.exe --host 127.0.0.1 -p 18812
+  4. aqui: pip install mt5linux==1.0.11
+     (num venv se o pip do sistema recusar; da 1.1 em diante o cliente ignora o
+     mt5server.exe e sobe um contêiner Docker por conta própria)"""
+
+PONTE_MAX = (1, 1)  # mt5linux >= 1.1 troca a conexão direta por contêiner Docker
 
 
-def escolher_modulo(ponte=None, host=None, porta=None, importar=None):
+def versao_mt5linux():
+    """Versão instalada do mt5linux como tupla, ou None se não der para saber."""
+    try:
+        from importlib.metadata import version
+        return tuple(int(x) for x in version("mt5linux").split(".")[:2])
+    except Exception:
+        return None
+
+
+def escolher_modulo(ponte=None, host=None, porta=None, importar=None, versao=versao_mt5linux):
     """Devolve (modulo, origem). origem: 'oficial' ou 'ponte host:porta'.
 
     ponte=None decide sozinho: o pacote oficial se existir, senão a ponte mt5linux."""
@@ -65,6 +78,10 @@ def escolher_modulo(ponte=None, host=None, porta=None, importar=None):
         mod = importar("mt5linux")
     except ImportError:
         raise ImportError("nem o pacote MetaTrader5 (Windows) nem o mt5linux (Linux) estão instalados")
+    v = versao()
+    if v and v >= PONTE_MAX:
+        raise ImportError("mt5linux %d.%d instalado; a partir da 1.1 ele sobe um contêiner Docker em vez "
+                          "de falar com o mt5server.exe. Use: pip install mt5linux==1.0.11" % v)
     host, porta = host or PONTE_HOST, porta or PONTE_PORTA
     return mod.MetaTrader5(host=host, port=porta), "ponte %s:%d" % (host, porta)
 

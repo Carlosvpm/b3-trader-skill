@@ -70,7 +70,11 @@ funciona.
 
 - **MetaTrader 5 no Linux**: o terminal roda no Wine (script oficial
   `mt5linux.sh` da MetaQuotes) com o `mt5server.exe` da ponte mt5linux ligado
-  (`wine mt5server.exe -p 18812`), e aqui `pip install mt5linux`. O `mt5.py`
+  (github.com/lucas-campagna/mt5linux/releases;
+  `wine mt5server.exe --host 127.0.0.1 -p 18812`), e aqui
+  `pip install mt5linux==1.0.11`, num venv se o pip do sistema recusar
+  (PEP 668). Nunca a 1.1 ou mais nova: ela ignora o `mt5server.exe` e sobe um
+  contêiner Docker sozinha; o `mt5.py` recusa essas versões. O `mt5.py`
   escolhe a ponte sozinho quando o pacote oficial não existe; `--host` e
   `--porta` apontam para um MT5 em outra máquina. Os comandos são os mesmos
   de baixo.

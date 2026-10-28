@@ -78,7 +78,7 @@ install skill
 - Para o painel: `tmux` (Linux e macOS; no Windows, pelo WSL).
 - Para puxar dados do MetaTrader 5: o terminal aberto e logado na corretora e,
   no Windows, `pip install MetaTrader5`; no Linux, o MT5 no Wine e
-  `pip install mt5linux` (veja abaixo).
+  `pip install mt5linux==1.0.11` (veja abaixo).
 - Para exportar o gráfico em PNG: `pip install Pillow` (opcional; SVG não precisa).
 
 ## Começo rápido, com dados de teste
@@ -165,7 +165,7 @@ Ele roda no Windows ou no Linux.
 ### No Linux (tudo numa máquina só)
 
 O terminal roda no Wine, pelo instalador oficial da MetaQuotes, e a ponte
-[mt5linux](https://github.com/tiloye/mt5linux) deixa o Python do Linux falar com ele.
+[mt5linux](https://github.com/lucas-campagna/mt5linux) deixa o Python do Linux falar com ele.
 
 ```bash
 # 1. MT5 no Wine (Ubuntu, Debian, Mint, Fedora)
@@ -173,15 +173,21 @@ wget https://download.terminal.free/cdn/web/metaquotes.software.corp/mt5/mt5linu
 chmod +x mt5linux.sh && ./mt5linux.sh
 # abra o MT5, faça login na conta da corretora e deixe aberto
 
-# 2. a ponte: baixe o mt5server.exe em github.com/tiloye/mt5linux/releases
-wine mt5server.exe -p 18812          # deixe rodando num painel do tmux
+# 2. a ponte: baixe o mt5server.exe em github.com/lucas-campagna/mt5linux/releases
+WINEPREFIX=~/.mt5 wine mt5server.exe --host 127.0.0.1 -p 18812   # deixe rodando num painel do tmux
 
-# 3. no Python do Linux
-pip install mt5linux
-python3 b3-dados/mt5.py simbolo WIN
-python3 b3-dados/mt5.py exportar WIN --de 2026-09-01
-python3 b3-dados/mt5.py ao-vivo WIN
+# 3. no Python do Linux (venv, porque Ubuntu e Mint recusam pip no sistema)
+python3 -m venv .venv
+.venv/bin/pip install mt5linux==1.0.11
+.venv/bin/python b3-dados/mt5.py simbolo WIN
+.venv/bin/python b3-dados/mt5.py exportar WIN --de 2026-09-01
+.venv/bin/python b3-dados/mt5.py ao-vivo WIN
 ```
+
+**Fixe a versão 1.0.11 do mt5linux.** Da 1.1 em diante o cliente ignora o
+`mt5server.exe` e, sem avisar, baixa a imagem Docker `lprett/mt5linux` e sobe
+um contêiner com outro MT5, que não está logado na sua conta. O `mt5.py` recusa
+essas versões. O `--host 127.0.0.1` deixa a ponte só na sua máquina.
 
 O `mt5.py` usa a ponte sozinho quando o pacote oficial não está instalado.
 Para um MT5 em outra máquina, use `--host` e `--porta` (ou `B3_MT5_HOST` e
