@@ -92,7 +92,8 @@ class PainelSessao(unittest.TestCase):
     def test_procura_a_sessao_pelo_nome_exato(self):
         # sem o "=", "has-session -t b3" acha "b3-feed" pelo prefixo e o --novo a derruba
         with open(os.path.join(ROOT, "b3-grafico", "painel.sh"), encoding="utf-8") as f:
-            texto = "\n".join(l for l in f.read().splitlines() if not l.lstrip().startswith("#"))
+            texto = "\n".join(l for l in f.read().splitlines() 
+                              if not l.lstrip().startswith("#") and "echo " not in l)
         for cmd in ("has-session", "kill-session", "attach", "switch-client"):
             achados = re.findall(r"tmux %s -t (\S+)" % cmd, texto)
             self.assertTrue(achados, cmd)
