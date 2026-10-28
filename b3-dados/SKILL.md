@@ -68,7 +68,13 @@ funciona.
 
 ## Fontes reais
 
-- **MetaTrader 5, via Python** (Windows, terminal aberto e logado):
+- **MetaTrader 5 no Linux**: o terminal roda no Wine (script oficial
+  `mt5linux.sh` da MetaQuotes) com o `mt5server.exe` da ponte mt5linux ligado
+  (`wine mt5server.exe -p 18812`), e aqui `pip install mt5linux`. O `mt5.py`
+  escolhe a ponte sozinho quando o pacote oficial não existe; `--host` e
+  `--porta` apontam para um MT5 em outra máquina. Os comandos são os mesmos
+  de baixo.
+- **MetaTrader 5 no Windows** (terminal aberto e logado):
   ```bash
   pip install MetaTrader5
   python mt5.py simbolo WIN                         # qual código pedir hoje

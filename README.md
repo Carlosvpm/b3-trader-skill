@@ -76,8 +76,9 @@ install skill
 
 - Python 3.8 ou mais novo. Nada obrigatório para instalar com pip.
 - Para o painel: `tmux` (Linux e macOS; no Windows, pelo WSL).
-- Para puxar dados do MetaTrader 5: Windows, o terminal MT5 aberto e logado
-  na sua corretora, e `pip install MetaTrader5`.
+- Para puxar dados do MetaTrader 5: o terminal aberto e logado na corretora e,
+  no Windows, `pip install MetaTrader5`; no Linux, o MT5 no Wine e
+  `pip install mt5linux` (veja abaixo).
 - Para exportar o gráfico em PNG: `pip install Pillow` (opcional; SVG não precisa).
 
 ## Começo rápido, com dados de teste
@@ -158,7 +159,37 @@ sem custos. Um teste garante que nenhuma estratégia olha para o futuro.
 
 ## Dados reais pelo MetaTrader 5
 
-No Windows, com o terminal MT5 aberto e logado:
+O MetaTrader 5 é gratuito em várias corretoras (na XP, ative em Plataformas).
+Ele roda no Windows ou no Linux.
+
+### No Linux (tudo numa máquina só)
+
+O terminal roda no Wine, pelo instalador oficial da MetaQuotes, e a ponte
+[mt5linux](https://github.com/tiloye/mt5linux) deixa o Python do Linux falar com ele.
+
+```bash
+# 1. MT5 no Wine (Ubuntu, Debian, Mint, Fedora)
+wget https://download.terminal.free/cdn/web/metaquotes.software.corp/mt5/mt5linux.sh
+chmod +x mt5linux.sh && ./mt5linux.sh
+# abra o MT5, faça login na conta da corretora e deixe aberto
+
+# 2. a ponte: baixe o mt5server.exe em github.com/tiloye/mt5linux/releases
+wine mt5server.exe -p 18812          # deixe rodando num painel do tmux
+
+# 3. no Python do Linux
+pip install mt5linux
+python3 b3-dados/mt5.py simbolo WIN
+python3 b3-dados/mt5.py exportar WIN --de 2026-09-01
+python3 b3-dados/mt5.py ao-vivo WIN
+```
+
+O `mt5.py` usa a ponte sozinho quando o pacote oficial não está instalado.
+Para um MT5 em outra máquina, use `--host` e `--porta` (ou `B3_MT5_HOST` e
+`B3_MT5_PORTA`).
+
+### No Windows
+
+Com o terminal MT5 aberto e logado:
 
 ```bash
 pip install MetaTrader5
@@ -176,6 +207,10 @@ lê cotações e nunca envia ordem.
 **MT5 no Windows e painel no WSL**: rode o `mt5.py ao-vivo` no Windows, na
 pasta do projeto, e o `painel.sh aovivo` no WSL, na mesma pasta (por exemplo
 `/mnt/c/Users/voce/projeto`). Os dois conversam pelos arquivos de `b3/`.
+
+**MT5 num Windows e você no Linux, em outra máquina**: rode o `mt5server.exe`
+da ponte no Windows (ele também roda nativo, sem Wine) e no Linux use
+`mt5.py ao-vivo WIN --host IP_DO_WINDOWS`.
 
 Também dá para importar o que você exportar à mão:
 

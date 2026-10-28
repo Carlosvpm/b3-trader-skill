@@ -65,6 +65,7 @@ class Repo(unittest.TestCase):
                       "time", "unicodedata", "signal", "re", "shutil",
                       "contratos", "dados", "indicadores", "sinais", "grafico", "tela",
                       "MetaTrader5",   # só no mt5.py, opcional (Windows)
+                      "mt5linux",      # só no mt5.py, opcional (Linux)
                       "PIL"}           # só para exportar PNG, opcional
         for s in SKILLS:
             for f in os.listdir(os.path.join(ROOT, s)):

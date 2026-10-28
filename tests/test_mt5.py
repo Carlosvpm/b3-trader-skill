@@ -34,6 +34,21 @@ class MT5(unittest.TestCase):
         fuso = M.rates_para_candles([rate("12:00", 1, 1, 1, 1)], "WIN", "WINZ26", fuso_servidor=-3)
         self.assertEqual(fuso[0].data_hora.hour, 9)
 
+    def test_array_estruturado(self):
+        class Arr(object):           # imita o array numpy que o MT5 devolve
+            class dtype(object):
+                names = ("time", "open", "high", "low", "close", "tick_volume", "spread", "real_volume")
+
+            def __init__(self, linhas):
+                self.linhas = linhas
+
+            def tolist(self):
+                return self.linhas
+        r = rate("09:05", 130000, 130050, 129995, 130020, real=12)
+        arr = Arr([tuple(r[k] for k in Arr.dtype.names)])
+        cs = M.rates_para_candles(arr, "WIN", "WINZ26")
+        self.assertEqual((cs[0].data_hora.minute, cs[0].fechamento, cs[0].volume), (5, 130020, 12))
+
     def test_ao_vivo_so_grava_fechados(self):
         rates = [rate("10:00", 1, 1, 1, 1), rate("10:01", 2, 2, 2, 2), rate("10:02", 3, 3, 3, 3)]
         cs = M.rates_para_candles(rates, "WIN", "WINZ26")
@@ -46,6 +61,41 @@ class MT5(unittest.TestCase):
         b = M.rates_para_candles([rate("10:01", 9, 9, 9, 9), rate("10:02", 3, 3, 3, 3)], "WIN", "X")
         m = M.mesclar(a, b)
         self.assertEqual([c.abertura for c in m], [1, 9, 3])
+
+
+class Ponte(unittest.TestCase):
+    def _importar(self, disponiveis):
+        class Falso(object):
+            def __init__(self, host=None, port=None):
+                self.host, self.port = host, port
+
+        def importar(nome):
+            if nome not in disponiveis:
+                raise ImportError(nome)
+            if nome == "mt5linux":
+                m = type("m", (), {})()
+                m.MetaTrader5 = Falso
+                return m
+            return "oficial"
+        return importar
+
+    def test_prefere_o_oficial(self):
+        mod, origem = M.escolher_modulo(importar=self._importar({"MetaTrader5", "mt5linux"}))
+        self.assertEqual((mod, origem), ("oficial", "oficial"))
+
+    def test_linux_cai_na_ponte(self):
+        mod, origem = M.escolher_modulo(importar=self._importar({"mt5linux"}))
+        self.assertEqual(origem, "ponte localhost:18812")
+        self.assertEqual((mod.host, mod.port), ("localhost", 18812))
+
+    def test_ponte_forcada_com_host(self):
+        mod, origem = M.escolher_modulo(True, "192.168.0.10", 9000,
+                                        importar=self._importar({"MetaTrader5", "mt5linux"}))
+        self.assertEqual(origem, "ponte 192.168.0.10:9000")
+
+    def test_nenhum_instalado(self):
+        with self.assertRaises(ImportError):
+            M.escolher_modulo(importar=self._importar(set()))
 
 
 if __name__ == "__main__":

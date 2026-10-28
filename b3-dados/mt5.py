@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """b3-dados / mt5.py: puxa candles do MetaTrader 5 para o formato padrão.
 
-Precisa do terminal MetaTrader 5 aberto e logado na sua corretora, e do pacote
-oficial `MetaTrader5` (pip install MetaTrader5). Esse pacote só roda no Windows,
-na mesma máquina do terminal. Este script NÃO envia ordens: só lê cotações.
+Precisa do terminal MetaTrader 5 aberto e logado na sua corretora. Duas formas:
+
+  Windows: pacote oficial `MetaTrader5` (pip install MetaTrader5), na mesma
+           máquina do terminal.
+  Linux:   o terminal roda no Wine (instalador oficial da MetaQuotes) com o
+           mt5server.exe do projeto mt5linux ligado, e aqui `pip install mt5linux`.
+           Escolhido sozinho quando o pacote oficial não existe, ou com --ponte.
+
+Este script NÃO envia ordens: só lê cotações.
 
 Uso:
   python mt5.py simbolo WIN                       # qual código pedir ao MT5 hoje
@@ -31,17 +37,52 @@ import dados as D  # noqa: E402
 C = D.C
 
 
-def _mt5():
+PONTE_HOST = os.environ.get("B3_MT5_HOST", "localhost")
+PONTE_PORTA = int(os.environ.get("B3_MT5_PORTA", "18812"))
+
+AJUDA_LINUX = """No Linux:
+  1. instale o MT5 pelo script oficial (roda no Wine):
+     wget https://download.terminal.free/cdn/web/metaquotes.software.corp/mt5/mt5linux.sh
+     chmod +x mt5linux.sh && ./mt5linux.sh
+  2. abra o MT5, faça login na sua conta e deixe aberto
+  3. baixe o mt5server.exe em github.com/tiloye/mt5linux/releases e rode:
+     wine mt5server.exe -p 18812
+  4. aqui: pip install mt5linux"""
+
+
+def escolher_modulo(ponte=None, host=None, porta=None, importar=None):
+    """Devolve (modulo, origem). origem: 'oficial' ou 'ponte host:porta'.
+
+    ponte=None decide sozinho: o pacote oficial se existir, senão a ponte mt5linux."""
+    importar = importar or __import__
+    if not ponte:
+        try:
+            return importar("MetaTrader5"), "oficial"
+        except ImportError:
+            if ponte is False:
+                raise
     try:
-        import MetaTrader5 as mt5  # noqa: N813
+        mod = importar("mt5linux")
     except ImportError:
-        sys.exit("erro: pacote MetaTrader5 não instalado. Rode `pip install MetaTrader5` "
-                 "no Windows, na máquina onde o terminal MT5 está aberto.")
+        raise ImportError("nem o pacote MetaTrader5 (Windows) nem o mt5linux (Linux) estão instalados")
+    host, porta = host or PONTE_HOST, porta or PONTE_PORTA
+    return mod.MetaTrader5(host=host, port=porta), "ponte %s:%d" % (host, porta)
+
+
+def _mt5(ponte=None, host=None, porta=None):
+    try:
+        mt5, origem = escolher_modulo(ponte, host, porta)
+    except ImportError as e:
+        sys.exit("erro: %s.\n\nNo Windows: pip install MetaTrader5\n\n%s" % (e, AJUDA_LINUX))
+    except Exception as e:  # a ponte não respondeu
+        sys.exit("erro: não consegui falar com o mt5server.exe em %s:%s (%s).\n"
+                 "Ele está rodando no Wine?\n\n%s" % (host or PONTE_HOST, porta or PONTE_PORTA, e, AJUDA_LINUX))
     if not mt5.initialize():
         erro = mt5.last_error()
         mt5.shutdown()
-        sys.exit("erro: não consegui conectar ao terminal MT5 (%s). Ele está aberto e logado?"
-                 % (erro,))
+        sys.exit("erro: não consegui conectar ao terminal MT5 via %s (%s). Ele está aberto e logado?"
+                 % (origem, erro))
+    print("conectado ao MT5 (%s)" % origem, file=sys.stderr)
     return mt5
 
 
@@ -63,6 +104,13 @@ def rates_para_candles(rates, ativo, contrato, fonte="mt5", fuso_servidor=0.0):
     """Converte o retorno de copy_rates_* (array numpy estruturado ou lista de dicts
     com time/open/high/low/close/tick_volume/real_volume) em Candles."""
     out = []
+    # Array numpy (local ou pela ponte): copia tudo de uma vez com tolist(),
+    # em vez de ler campo a campo (pela ponte, cada leitura é uma ida à rede).
+    try:
+        nomes = list(rates.dtype.names)
+        rates = [dict(zip(nomes, linha)) for linha in rates.tolist()]
+    except AttributeError:
+        pass
     for r in rates:
         quando = dt.datetime(1970, 1, 1) + dt.timedelta(seconds=int(_campo(r, "time")),
                                                         hours=fuso_servidor)
@@ -105,7 +153,7 @@ def cmd_simbolo(a):
 
 def cmd_exportar(a):
     ativo = C._ativo(a.ativo)
-    mt5 = _mt5()
+    mt5 = _mt5(a.ponte, a.host, a.porta)
     de, ate = C._data(a.de), C._data(a.ate or dt.date.today())
     todos = []
     try:
@@ -140,7 +188,7 @@ def cmd_exportar(a):
 
 def cmd_ao_vivo(a):
     ativo = C._ativo(a.ativo)
-    mt5 = _mt5()
+    mt5 = _mt5(a.ponte, a.host, a.porta)
     arq = os.path.join(a.pasta, "%s_1m_aovivo.csv" % ativo)
     estado = os.path.join("b3", "estado", "%s_ultimo.json" % ativo)
     os.makedirs(os.path.dirname(estado), exist_ok=True)
@@ -206,6 +254,10 @@ def main(argv=None):
         s.add_argument("--fuso-servidor", type=float, default=0.0,
                        help="horas a somar ao horário do servidor para chegar em Brasília")
         s.add_argument("--pasta", default=D.PASTA_PADRAO)
+        s.add_argument("--ponte", action="store_const", const=True, default=None,
+                       help="Linux: usar a ponte mt5linux mesmo se o pacote oficial existir")
+        s.add_argument("--host", help="host do mt5server.exe (padrão: localhost ou B3_MT5_HOST)")
+        s.add_argument("--porta", type=int, help="porta do mt5server.exe (padrão: 18812 ou B3_MT5_PORTA)")
         s.set_defaults(fn=fn)
         if nome == "exportar":
             s.add_argument("--de", required=True)
