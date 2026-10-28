@@ -107,6 +107,41 @@ def _mt5(ponte=None, host=None, porta=None):
     return mt5
 
 
+LEITURAS_VAZIAS = 5   # seguidas, antes de reconectar
+
+
+class Vigia(object):
+    """Conta leituras vazias seguidas. Uma conexão da ponte pode degradar sem erro:
+    copy_rates e symbol_info passam a devolver None para sempre. Uma conexão nova resolve."""
+
+    def __init__(self, limite=LEITURAS_VAZIAS):
+        self.limite, self.vazias = limite, 0
+
+    def leitura(self, ok):
+        """Registra uma leitura; True quando é hora de reconectar."""
+        self.vazias = 0 if ok else self.vazias + 1
+        if self.vazias >= self.limite:
+            self.vazias = 0
+            return True
+        return False
+
+
+def _reconectar(mt5, a, espera=5):
+    try:
+        mt5.shutdown()
+    except Exception:
+        pass
+    while True:
+        try:
+            novo = _mt5(a.ponte, a.host, a.porta)
+            print("%s reconectado ao MT5" % dt.datetime.now().strftime("%H:%M:%S"))
+            return novo
+        except SystemExit as e:
+            print("%s sem conexão (%s), tentando de novo em %ds" % (
+                dt.datetime.now().strftime("%H:%M:%S"), str(e).splitlines()[0], espera))
+            time.sleep(espera)
+
+
 def simbolo_do_dia(ativo, data, simbolo=None):
     """Código a pedir ao MT5: o informado, ou o contrato líquido pela regra de rolagem."""
     if simbolo and simbolo.lower() != "auto":
@@ -247,6 +282,7 @@ def cmd_ao_vivo(a):
     gravados = D.ler(arq) if os.path.exists(arq) else []
     print("Ao vivo %s -> %s (Ctrl+C para parar)" % (ativo, arq))
     simb, escolhido = None, None
+    vigia = Vigia()
     try:
         while True:
             agora = dt.datetime.now(C.BRT).replace(tzinfo=None)
@@ -258,10 +294,18 @@ def cmd_ao_vivo(a):
                 if novo != simb:
                     print("%s usando %s (%s)" % (agora.strftime("%H:%M:%S"), novo, motivo))
                 simb, escolhido = novo, agora
-            mt5.symbol_select(simb, True)
             st = C.status_pregao(ativo, agora)
-            rates = mt5.copy_rates_from_pos(simb, mt5.TIMEFRAME_M1, 0, 3)
-            tick = mt5.symbol_info_tick(simb)
+            try:
+                mt5.symbol_select(simb, True)
+                rates = mt5.copy_rates_from_pos(simb, mt5.TIMEFRAME_M1, 0, 3)
+                tick = mt5.symbol_info_tick(simb)
+            except Exception as e:  # conexão da ponte caiu
+                print("%s erro na leitura: %s" % (agora.strftime("%H:%M:%S"), e))
+                rates = tick = None
+            if vigia.leitura(rates is not None and len(rates) > 0):
+                print("%s %d leituras vazias seguidas, reconectando" % (agora.strftime("%H:%M:%S"), vigia.limite))
+                mt5 = _reconectar(mt5, a)
+                continue
             if rates is not None and len(rates):
                 contrato = C.contrato_liquido(ativo, agora.date()) if "$" in simb else simb
                 novos = rates_para_candles(rates, ativo, contrato, "mt5", a.fuso_servidor)
@@ -333,15 +377,26 @@ def cmd_cotacoes(a):
     destino = os.path.join("b3", "estado", "cotacoes.json")
     os.makedirs(os.path.dirname(destino), exist_ok=True)
     print("Cotações de %d símbolos -> %s (Ctrl+C para parar)" % (len(lista), destino))
+    vigia = Vigia()
     try:
         while True:
             agora = dt.datetime.now(C.BRT).replace(tzinfo=None)
             itens = []
-            for simb, rotulo in lista:
-                info = mt5.symbol_info(simb)
-                if info is None:
-                    continue
-                itens.append(cotacao(simb, rotulo, info, mt5.symbol_info_tick(simb)))
+            try:
+                for simb, rotulo in lista:
+                    info = mt5.symbol_info(simb)
+                    if info is None:
+                        continue
+                    itens.append(cotacao(simb, rotulo, info, mt5.symbol_info_tick(simb)))
+            except Exception as e:  # conexão da ponte caiu
+                print("%s erro na leitura: %s" % (agora.strftime("%H:%M:%S"), e))
+                itens = []
+            if vigia.leitura(bool(itens)):
+                print("%s %d leituras vazias seguidas, reconectando" % (agora.strftime("%H:%M:%S"), vigia.limite))
+                mt5 = _reconectar(mt5, a)
+                for simb, _ in lista:
+                    mt5.symbol_select(simb, True)
+                continue
             tmp = destino + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump({"atualizado": agora.isoformat(timespec="seconds"), "itens": itens},

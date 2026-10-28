@@ -120,6 +120,19 @@ class Cotacoes(unittest.TestCase):
         self.assertIsNone(c["variacao"])
 
 
+class Vigia(unittest.TestCase):
+    def test_reconecta_depois_de_vazias_seguidas(self):
+        v = M.Vigia(3)
+        self.assertEqual([v.leitura(False) for _ in range(3)], [False, False, True])
+        self.assertFalse(v.leitura(False))   # zera depois de pedir a reconexão
+
+    def test_leitura_boa_zera(self):
+        v = M.Vigia(3)
+        v.leitura(False), v.leitura(False), v.leitura(True)
+        self.assertFalse(v.leitura(False))
+        self.assertFalse(v.leitura(False))
+
+
 class Ponte(unittest.TestCase):
     def _importar(self, disponiveis):
         class Falso(object):
