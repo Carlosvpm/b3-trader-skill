@@ -86,3 +86,15 @@ class Repo(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PainelSessao(unittest.TestCase):
+    def test_procura_a_sessao_pelo_nome_exato(self):
+        # sem o "=", "has-session -t b3" acha "b3-feed" pelo prefixo e o --novo a derruba
+        with open(os.path.join(ROOT, "b3-grafico", "painel.sh"), encoding="utf-8") as f:
+            texto = "\n".join(l for l in f.read().splitlines() if not l.lstrip().startswith("#"))
+        for cmd in ("has-session", "kill-session", "attach", "switch-client"):
+            achados = re.findall(r"tmux %s -t (\S+)" % cmd, texto)
+            self.assertTrue(achados, cmd)
+            for alvo in achados:
+                self.assertTrue(alvo.startswith('"=$SESSAO'), "%s -t %s" % (cmd, alvo))

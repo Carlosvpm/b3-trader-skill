@@ -77,7 +77,7 @@ segue o horário do replay), `aovivo` (lê `b3/dados/*_1m_aovivo.csv`, que o
 `b3/dados/` a cada 2 s).
 
 No tmux: `Ctrl+b` e depois `1`, `2` ou `3` troca de janela, `Ctrl+b d` sai e
-deixa rodando, `tmux attach -t b3` volta, `tmux kill-session -t b3` fecha. O
+deixa rodando, `tmux attach -t b3` volta, `tmux kill-session -t =b3` fecha. O
 mouse troca de painel.
 
 **MetaTrader 5 no Windows + tmux no WSL**: rode o `mt5.py ao-vivo` no

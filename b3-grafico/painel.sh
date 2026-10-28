@@ -23,7 +23,7 @@
 #   --sem-anexar              cria a sessão e não entra nela
 #
 # Dentro do tmux: Ctrl+b e depois 1, 2, 3 troca de janela; Ctrl+b d sai sem fechar;
-# "tmux kill-session -t b3" fecha tudo. O mouse funciona para trocar de painel.
+# "tmux kill-session -t =b3" fecha tudo. O mouse funciona para trocar de painel.
 
 set -euo pipefail
 
@@ -70,12 +70,12 @@ PAINEL="$RAIZ/b3-grafico/painel.py"
 DADOS="$RAIZ/b3-dados/dados.py"
 SINAIS="$RAIZ/b3-sinais/sinais.py"
 
-if tmux has-session -t "$SESSAO" 2>/dev/null; then
+if tmux has-session -t "=$SESSAO" 2>/dev/null; then
   if [ "$NOVO" = 1 ]; then
-    tmux kill-session -t "$SESSAO"
+    tmux kill-session -t "=$SESSAO"
   else
     echo "sessão $SESSAO já existe: entrando (use --novo para recriar)"
-    [ "$ANEXAR" = 1 ] && exec tmux attach -t "$SESSAO"
+    [ "$ANEXAR" = 1 ] && exec tmux attach -t "=$SESSAO"
     exit 0
   fi
 fi
@@ -143,7 +143,7 @@ tmux set -t "$SESSAO" pane-active-border-style "fg=colour221"
 tmux set -t "$SESSAO" pane-border-lines heavy 2>/dev/null || true
 
 # janela 1: gráficos principais + painel
-P0="$(tmux display -p -t "$SESSAO:principal" '#{pane_id}')"
+P0="$(tmux display -p -t "=$SESSAO:principal" '#{pane_id}')"
 tmux send-keys -t "$P0" "$(cmd_grafico "${LISTA[0]}" "$TF" "$EST")" C-m
 tmux select-pane -t "$P0" -T "${LISTA[0]} ${TF}m · $EST"
 PD="$(tmux split-window -h -l 46 -t "$P0" -c "$DIR" -P -F '#{pane_id}')"
@@ -157,8 +157,8 @@ fi
 tmux select-pane -t "$P0"
 
 # janela 2: 1 minuto
-tmux new-window -t "$SESSAO" -n "1min" -c "$DIR"
-Q0="$(tmux display -p -t "$SESSAO:1min" '#{pane_id}')"
+tmux new-window -t "=$SESSAO" -n "1min" -c "$DIR"
+Q0="$(tmux display -p -t "=$SESSAO:1min" '#{pane_id}')"
 tmux send-keys -t "$Q0" "$(cmd_grafico "${LISTA[0]}" 1)" C-m
 tmux select-pane -t "$Q0" -T "${LISTA[0]} 1m"
 if [ "${#LISTA[@]}" -gt 1 ]; then
@@ -168,12 +168,12 @@ if [ "${#LISTA[@]}" -gt 1 ]; then
 fi
 
 # janela 3: comparação das estratégias
-tmux new-window -t "$SESSAO" -n "estrategias" -c "$DIR"
-tmux send-keys -t "$SESSAO:estrategias" "$(cmd_comparar)" C-m
-tmux select-pane -t "$SESSAO:estrategias" -T "comparação ${TF}m"
+tmux new-window -t "=$SESSAO" -n "estrategias" -c "$DIR"
+tmux send-keys -t "=$SESSAO:estrategias" "$(cmd_comparar)" C-m
+tmux select-pane -t "=$SESSAO:estrategias" -T "comparação ${TF}m"
 
-tmux select-window -t "$SESSAO:principal"
+tmux select-window -t "=$SESSAO:principal"
 if [ "$ANEXAR" = 1 ]; then
-  if [ -n "${TMUX:-}" ]; then exec tmux switch-client -t "$SESSAO"; else exec tmux attach -t "$SESSAO"; fi
+  if [ -n "${TMUX:-}" ]; then exec tmux switch-client -t "=$SESSAO"; else exec tmux attach -t "=$SESSAO"; fi
 fi
 echo "sessão $SESSAO criada (tmux attach -t $SESSAO)"

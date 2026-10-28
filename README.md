@@ -136,7 +136,7 @@ b3-grafico/painel.sh arquivo --tf 15 -e vwap       # redesenha os arquivos de b3
 ```
 
 No tmux: `Ctrl+b` e depois `1`, `2` ou `3` troca de janela; `Ctrl+b d` sai e
-deixa rodando; `tmux attach -t b3` volta; `tmux kill-session -t b3` fecha.
+deixa rodando; `tmux attach -t b3` volta; `tmux kill-session -t =b3` fecha.
 
 ## As estratégias
 
