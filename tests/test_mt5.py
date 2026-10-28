@@ -85,6 +85,12 @@ class Liquidez(unittest.TestCase):
         mt5 = self._mt5({"WDOX26": 300000, "WDOZ26": 900000})
         self.assertEqual(M.simbolo_por_liquidez(mt5, "WDO", dt.date(2026, 10, 29))[0], "WDOZ26")
 
+    def test_leitura_falhou_nao_troca(self):
+        mt5 = self._mt5({"WDOX26": 1192604})            # Z26 sem dado
+        simb, motivo = M.simbolo_por_liquidez(mt5, "WDO", dt.date(2026, 10, 28))
+        self.assertIsNone(simb)
+        self.assertIn("sem volume", motivo)
+
     def test_longe_do_vencimento_usa_a_regra(self):
         mt5 = self._mt5({})
         self.assertEqual(M.simbolo_por_liquidez(mt5, "WIN", dt.date(2026, 10, 28)),

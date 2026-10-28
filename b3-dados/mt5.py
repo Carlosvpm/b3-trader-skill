@@ -137,8 +137,9 @@ def simbolo_por_liquidez(mt5, ativo, data, simbolo=None):
         return v["contrato_liquido"], "regra"
     atual, proximo = v["vigente"]["codigo"], v["proximo"]["codigo"]
     va, vp = volume_do_dia(mt5, atual), volume_do_dia(mt5, proximo)
-    if not va and not vp:
-        return v["contrato_liquido"], "regra (sem volume)"
+    if not va or not vp:
+        # leitura falhou (terminal ocupado, símbolo sem dado): quem chama mantém o que tinha
+        return None, "sem volume de %s" % (atual if not va else proximo)
     if vp > va:
         return proximo, "liquidez %s %d > %s %d" % (proximo, vp, atual, va)
     return atual, "liquidez %s %d >= %s %d" % (atual, va, proximo, vp)
@@ -251,6 +252,9 @@ def cmd_ao_vivo(a):
             agora = dt.datetime.now(C.BRT).replace(tzinfo=None)
             if escolhido is None or (agora - escolhido).total_seconds() >= 300:
                 novo, motivo = simbolo_por_liquidez(mt5, ativo, agora.date(), a.simbolo)
+                if novo is None:
+                    novo = simb or C.contrato_liquido(ativo, agora.date())
+                    motivo += ", mantendo %s" % novo
                 if novo != simb:
                     print("%s usando %s (%s)" % (agora.strftime("%H:%M:%S"), novo, motivo))
                 simb, escolhido = novo, agora
