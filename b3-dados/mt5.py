@@ -273,6 +273,18 @@ def cmd_exportar(a):
     return D._imprimir_problemas(D.validar(todos), False, feitos[0][1])
 
 
+MAX_RECUPERAR = 600   # candles de 1 min pedidos de uma vez depois de uma queda
+
+
+def candles_a_pedir(gravados, agora):
+    """Quantos candles de 1 min pedir: os 3 de sempre ou, depois de uma queda (ponte, login,
+    terminal fechado), todos desde o último gravado no dia, para não ficar buraco."""
+    if not gravados or gravados[-1].data_hora.date() != agora.date():
+        return 3
+    faltam = int((agora - gravados[-1].data_hora).total_seconds() // 60) + 2
+    return max(3, min(MAX_RECUPERAR, faltam))
+
+
 def cmd_ao_vivo(a):
     ativo = C._ativo(a.ativo)
     mt5 = _mt5(a.ponte, a.host, a.porta)
@@ -297,7 +309,7 @@ def cmd_ao_vivo(a):
             st = C.status_pregao(ativo, agora)
             try:
                 mt5.symbol_select(simb, True)
-                rates = mt5.copy_rates_from_pos(simb, mt5.TIMEFRAME_M1, 0, 3)
+                rates = mt5.copy_rates_from_pos(simb, mt5.TIMEFRAME_M1, 0, candles_a_pedir(gravados, agora))
                 tick = mt5.symbol_info_tick(simb)
             except Exception as e:  # conexão da ponte caiu
                 print("%s erro na leitura: %s" % (agora.strftime("%H:%M:%S"), e))

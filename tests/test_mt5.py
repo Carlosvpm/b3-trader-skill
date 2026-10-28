@@ -120,6 +120,22 @@ class Cotacoes(unittest.TestCase):
         self.assertIsNone(c["variacao"])
 
 
+class Recuperar(unittest.TestCase):
+    def _gravado(self, hhmm):
+        return M.D.Candle(dt.datetime(2026, 10, 28, int(hhmm[:2]), int(hhmm[3:])), "WIN", "WINZ26",
+                          1, 1, 1, 1, 1, "mt5")
+
+    def test_normal_pede_3(self):
+        self.assertEqual(M.candles_a_pedir([self._gravado("10:00")], dt.datetime(2026, 10, 28, 10, 1, 30)), 3)
+
+    def test_depois_de_queda_pede_o_intervalo(self):
+        self.assertEqual(M.candles_a_pedir([self._gravado("16:51")], dt.datetime(2026, 10, 28, 17, 17, 40)), 28)
+
+    def test_outro_dia_ou_vazio(self):
+        self.assertEqual(M.candles_a_pedir([], dt.datetime(2026, 10, 28, 9, 0)), 3)
+        self.assertEqual(M.candles_a_pedir([self._gravado("18:20")], dt.datetime(2026, 10, 29, 9, 1)), 3)
+
+
 class Vigia(unittest.TestCase):
     def test_reconecta_depois_de_vazias_seguidas(self):
         v = M.Vigia(3)
