@@ -1,0 +1,15 @@
+{
+  "_leia": "Copie para b3/estrategias.json. 'geral' vale para todas; cada estratégia sobrescreve só o que precisar. -p na linha de comando ganha de tudo.",
+  "geral": {
+    "contratos": 1,
+    "fim_entradas": "17:30",
+    "zerar_em": "17:55",
+    "max_operacoes_dia": 0
+  },
+  "rompimento_abertura": {"minutos": 15, "rr": 2.0, "buffer_ticks": 1},
+  "setup_9_1": {"periodo": 9, "validade": 2, "vender": true},
+  "cruzamento_medias": {"rapida": 9, "lenta": 21, "stop_candles": 5},
+  "vwap": {"inicio": "09:30", "stop_candles": 3},
+  "ifr2": {"periodo": 2, "entrada": 25, "max_candles": 7, "vender": false, "saida_venda": 75, "stop_pontos": 0},
+  "hilo": {"periodo": 8}
+}

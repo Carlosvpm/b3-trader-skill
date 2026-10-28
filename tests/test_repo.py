@@ -5,7 +5,7 @@ import unittest
 
 from _load import ROOT
 
-SKILLS = ["b3-contratos", "b3-dados"]
+SKILLS = ["b3-contratos", "b3-dados", "b3-sinais", "b3-grafico"]
 
 
 def frontmatter(path):
@@ -62,7 +62,10 @@ class Repo(unittest.TestCase):
 
     def test_scripts_so_biblioteca_padrao(self):
         permitidos = {"argparse", "csv", "datetime", "json", "math", "os", "random", "sys",
-                      "time", "unicodedata", "contratos", "dados", "MetaTrader5"}
+                      "time", "unicodedata", "signal", "re", "shutil",
+                      "contratos", "dados", "indicadores", "sinais", "grafico", "tela",
+                      "MetaTrader5",   # só no mt5.py, opcional (Windows)
+                      "PIL"}           # só para exportar PNG, opcional
         for s in SKILLS:
             for f in os.listdir(os.path.join(ROOT, s)):
                 if not f.endswith(".py"):
