@@ -99,7 +99,14 @@ funciona.
 - **Exportação do MT5** (Ferramentas, Centro de Histórico, ou o gráfico
   exportado): `importar arquivo.csv --ativo WIN`. O formato é detectado sozinho.
 - **Exportação do Profit**: `importar arquivo.csv --ativo WIN --formato profit`
-  (ponto e vírgula, vírgula decimal, data `dd/mm/aaaa`).
+  (ponto e vírgula, vírgula decimal, data `dd/mm/aaaa`). O Arquivo, Exportar
+  Dados Históricos sai sem cabeçalho e do mais novo para o mais antigo; o
+  importador reconhece. Com `WINFUT`/`WDOFUT` a série é contínua com ajuste
+  proporcional nas rolagens (preços com decimais e, no passado, bem acima do
+  negociado): retornos e variações percentuais batem com o bruto, pontos não.
+  Cada exportação vai até ~100 mil candles e a janela de datas é de no máximo
+  2 anos; o 5 e o 1 min só existem para o período já baixado pelo gráfico,
+  enquanto 10, 15 e 60 min vêm do servidor (no WIN, desde 2012).
 - **Qualquer CSV** com colunas de data, hora, abertura, máxima, mínima e
   fechamento, em português ou inglês: `--formato generico`.
 

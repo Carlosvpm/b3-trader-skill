@@ -26,6 +26,7 @@ import json
 import math
 import os
 import random
+import re
 import sys
 import unicodedata
 
@@ -422,6 +423,10 @@ def _data_hora(texto_data, texto_hora):
     return dt.datetime.combine(data, hora.replace(second=0))
 
 
+PROFIT_SEM_CABECALHO = ["Ativo", "Data", "Hora", "Abertura", "Máximo", "Mínimo", "Fechamento",
+                        "Volume", "Quantidade"]
+
+
 def detectar_formato(linhas):
     cab = linhas[0]
     if cab.startswith("<DATE>") or "<OPEN>" in cab:
@@ -450,6 +455,9 @@ def importar(caminho, ativo, formato="auto", fonte=None):
     delim = "\t" if "\t" in linhas[0] else (";" if ";" in linhas[0] else ",")
     virgula = formato == "profit" or delim == ";"
     rows = list(csv.reader(linhas, delimiter=delim))
+    if formato == "profit" and len(rows[0]) > 2 and re.fullmatch(r"\d{2}/\d{2}/\d{4}", rows[0][1].strip()):
+        # "Exportar Dados Históricos" do Profit sai sem cabeçalho e do mais novo para o mais antigo
+        rows.insert(0, PROFIT_SEM_CABECALHO[:len(rows[0])])
     cab, dados = rows[0], rows[1:]
     m = _mapear(cab)
     if "data_hora" not in m and "data" not in m:

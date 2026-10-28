@@ -171,6 +171,17 @@ class Importar(Base):
         self.assertEqual(cs[0].contrato, "WDOZ26")   # do arquivo
         self.assertEqual(cs[0].fonte, "profit")
 
+    def test_profit_sem_cabecalho(self):
+        # Arquivo > Exportar Dados Históricos: sem cabeçalho, do mais novo para o mais antigo
+        cs = D.importar(os.path.join(FIX, "profit_win_5m_sem_cabecalho.csv"), "WIN")
+        self.assertEqual(len(cs), 3)
+        self.assertEqual(cs[0].data_hora, dt.datetime(2026, 10, 28, 17, 50))
+        self.assertEqual((cs[-1].abertura, cs[-1].maxima, cs[-1].minima, cs[-1].fechamento),
+                         (173605, 173665, 173320, 173530))
+        self.assertEqual(cs[-1].volume, 34310)       # Quantidade, não volume financeiro
+        self.assertEqual(cs[0].contrato, "WINZ26")   # WINFUT não é contrato: regra de rolagem
+        self.assertEqual(cs[0].fonte, "profit")
+
     def test_generico_em_ingles(self):
         caminho = os.path.join(self.tmp, "x.csv")
         with open(caminho, "w") as f:
