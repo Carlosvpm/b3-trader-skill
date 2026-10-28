@@ -114,6 +114,36 @@ def simbolo_do_dia(ativo, data, simbolo=None):
     return C.contrato_liquido(ativo, data)
 
 
+JANELA_LIQUIDEZ = 5  # dias úteis antes do último dia em que vale comparar volumes
+
+
+def volume_do_dia(mt5, simbolo):
+    """Volume do pregão corrente (real, ou de ticks se a corretora não tiver)."""
+    mt5.symbol_select(simbolo, True)
+    r = mt5.copy_rates_from_pos(simbolo, mt5.TIMEFRAME_D1, 0, 1)
+    if r is None or not len(r):
+        return 0
+    return int(_campo(r[0], "real_volume") or _campo(r[0], "tick_volume") or 0)
+
+
+def simbolo_por_liquidez(mt5, ativo, data, simbolo=None):
+    """Perto do vencimento, o contrato com mais volume hoje; fora disso, a regra de rolagem.
+
+    Devolve (código, motivo)."""
+    if simbolo and simbolo.lower() != "auto":
+        return simbolo.upper(), "informado"
+    v = C.vigente(ativo, data)
+    if v["dias_uteis_ate_ultimo_dia"] > JANELA_LIQUIDEZ:
+        return v["contrato_liquido"], "regra"
+    atual, proximo = v["vigente"]["codigo"], v["proximo"]["codigo"]
+    va, vp = volume_do_dia(mt5, atual), volume_do_dia(mt5, proximo)
+    if not va and not vp:
+        return v["contrato_liquido"], "regra (sem volume)"
+    if vp > va:
+        return proximo, "liquidez %s %d > %s %d" % (proximo, vp, atual, va)
+    return atual, "liquidez %s %d >= %s %d" % (atual, va, proximo, vp)
+
+
 def _campo(r, nome):
     try:
         return r[nome]
@@ -215,10 +245,15 @@ def cmd_ao_vivo(a):
     os.makedirs(os.path.dirname(estado), exist_ok=True)
     gravados = D.ler(arq) if os.path.exists(arq) else []
     print("Ao vivo %s -> %s (Ctrl+C para parar)" % (ativo, arq))
+    simb, escolhido = None, None
     try:
         while True:
             agora = dt.datetime.now(C.BRT).replace(tzinfo=None)
-            simb = simbolo_do_dia(ativo, agora.date(), a.simbolo)
+            if escolhido is None or (agora - escolhido).total_seconds() >= 300:
+                novo, motivo = simbolo_por_liquidez(mt5, ativo, agora.date(), a.simbolo)
+                if novo != simb:
+                    print("%s usando %s (%s)" % (agora.strftime("%H:%M:%S"), novo, motivo))
+                simb, escolhido = novo, agora
             mt5.symbol_select(simb, True)
             st = C.status_pregao(ativo, agora)
             rates = mt5.copy_rates_from_pos(simb, mt5.TIMEFRAME_M1, 0, 3)

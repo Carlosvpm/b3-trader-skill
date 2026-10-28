@@ -88,7 +88,11 @@ funciona.
   ```
   O `ao-vivo` grava `b3/dados/WIN_1m_aovivo.csv` (candles fechados) e
   `b3/estado/WIN_ultimo.json` (último preço, bid, ask e o candle em formação).
-  Ele usa o contrato vigente pela regra de rolagem, nunca um código fixo.
+  Ele usa o contrato vigente pela regra de rolagem, nunca um código fixo. Nos
+  5 dias úteis antes do último dia, compara o volume do dia do contrato atual e
+  do próximo no MT5 e fica com o maior (o WDO, por exemplo, costuma seguir no
+  contrato que vence até perto do último dia). Ele reavalia a cada 5 minutos e
+  avisa quando troca.
   `python mt5.py cotacoes` grava `b3/estado/cotacoes.json` com a lista de
   monitoramento do painel (código, último, variação contra o fechamento
   anterior); `--simbolos IBOV,WDO$N=DÓLAR,PETR4` muda a lista.

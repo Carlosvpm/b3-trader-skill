@@ -63,6 +63,37 @@ class MT5(unittest.TestCase):
         self.assertEqual([c.abertura for c in m], [1, 9, 3])
 
 
+class Liquidez(unittest.TestCase):
+    def _mt5(self, volumes):
+        class Falso(object):
+            TIMEFRAME_D1 = 16408
+
+            def symbol_select(self, simb, ligar):
+                return True
+
+            def copy_rates_from_pos(self, simb, tf, pos, n):
+                return [{"real_volume": volumes.get(simb, 0), "tick_volume": 0}]
+        return Falso()
+
+    def test_fica_no_atual_enquanto_ele_tem_mais_volume(self):
+        mt5 = self._mt5({"WDOX26": 1192604, "WDOZ26": 17880})
+        simb, motivo = M.simbolo_por_liquidez(mt5, "WDO", dt.date(2026, 10, 28))
+        self.assertEqual(simb, "WDOX26")
+        self.assertIn("liquidez", motivo)
+
+    def test_vira_quando_o_proximo_passa(self):
+        mt5 = self._mt5({"WDOX26": 300000, "WDOZ26": 900000})
+        self.assertEqual(M.simbolo_por_liquidez(mt5, "WDO", dt.date(2026, 10, 29))[0], "WDOZ26")
+
+    def test_longe_do_vencimento_usa_a_regra(self):
+        mt5 = self._mt5({})
+        self.assertEqual(M.simbolo_por_liquidez(mt5, "WIN", dt.date(2026, 10, 28)),
+                         ("WINZ26", "regra"))
+
+    def test_codigo_informado(self):
+        self.assertEqual(M.simbolo_por_liquidez(None, "WDO", dt.date(2026, 10, 28), "wdox26")[0], "WDOX26")
+
+
 class Cotacoes(unittest.TestCase):
     def test_lista_com_rotulo(self):
         self.assertEqual(M.ler_lista("IBOV, WDO$N=DÓLAR,,PETR4"),
