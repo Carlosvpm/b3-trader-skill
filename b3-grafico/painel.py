@@ -218,7 +218,7 @@ def desenhar(info, largura, altura, tf, estrategias):
     ativos_ok = [a for a in info["ativos"] if not a.get("erro")]
     if ativos_ok and y + 4 < t.h:
         altura_tab = min(len(estrategias) + 3, t.h - y - 1)
-        t.caixa(0, y, w, y + altura_tab, COR["apagado"], "Estratégias %dm" % tf, COR["amarelo"])
+        t.caixa(0, y, w, y + altura_tab, COR["apagado"], "Estratégias %dm · SIMULADO" % tf, COR["amarelo"])
         col = max(11, (w - 10) // max(1, len(ativos_ok)))
         x = 9
         for a in ativos_ok:
@@ -254,7 +254,7 @@ def desenhar(info, largura, altura, tf, estrategias):
     # eventos
     if info["eventos"] and y + 3 < t.h:
         altura_ev = t.h - y - 1
-        t.caixa(0, y, w, y + altura_ev, COR["apagado"], "Eventos do dia", COR["amarelo"])
+        t.caixa(0, y, w, y + altura_ev, COR["apagado"], "Eventos do dia · simulado", COR["amarelo"])
         for k, ev in enumerate(info["eventos"][:altura_ev - 1]):
             quando, ativo, nome, lado, tipo, preco, pts = ev
             yy = y + 1 + k

@@ -322,7 +322,7 @@ def _rodape(t, ativo, resultado, agora):
     y2 = t.h - 1
     if a:
         cor = COR["alta"] if a["pontos_abertos"] >= 0 else COR["baixa"]
-        x = t.texto(1, y2, " %s " % ("COMPRADO" if a["lado"] == "compra" else "VENDIDO"), COR["preto"],
+        x = t.texto(1, y2, " SIMULADO %s " % ("COMPRADO" if a["lado"] == "compra" else "VENDIDO"), COR["preto"],
                     bg=COR["alta"] if a["lado"] == "compra" else COR["baixa"], negrito=True)
         x = t.texto(x + 1, y2, "em %s  stop %s  alvo %s  " % (
             preco_fmt(ativo, a["preco"]), preco_fmt(ativo, a["stop"]), preco_fmt(ativo, a["alvo"])), COR["texto"])
@@ -330,10 +330,10 @@ def _rodape(t, ativo, resultado, agora):
     elif pe:
         txt = ("%s stop em %s" % (pe["lado"], preco_fmt(ativo, pe["gatilho"]))) if pe["tipo"] == "stop" \
             else ("%s a mercado no próximo candle" % pe["lado"])
-        x = t.texto(1, y2, " SINAL ", COR["preto"], bg=COR["amarelo"], negrito=True)
+        x = t.texto(1, y2, " SINAL SIMULADO ", COR["preto"], bg=COR["amarelo"], negrito=True)
         t.texto(x + 1, y2, "%s  (%s)" % (txt, pe["motivo"]), COR["amarelo"])
     else:
-        t.texto(1, y2, "sem posição", COR["apagado"])
+        t.texto(1, y2, "sem posição simulada", COR["apagado"])
 
 
 # ------------------------------------------------------------------ dados

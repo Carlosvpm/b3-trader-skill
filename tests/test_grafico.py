@@ -63,7 +63,7 @@ class Grafico(Base):
                        "entrada": {"data_hora": self.cinco[-3].data_hora.strftime("%Y-%m-%d %H:%M")},
                        "pontos_abertos": 25.0}
         tudo = texto(G.desenhar(self.cinco, 120, 34, G.Opcoes(), r))
-        self.assertIn("COMPRADO", tudo)
+        self.assertIn("SIMULADO COMPRADO", tudo)
         self.assertIn("╌", tudo)
 
     def test_terminal_pequeno_nao_quebra(self):
@@ -121,7 +121,7 @@ class Painel(Base):
         self.assertIn("erro", wdo)                           # sem arquivo de WDO
         tudo = texto(P.desenhar(info, 46, 40, 5, ests))
         self.assertIn("WIN · WINZ26", tudo)
-        self.assertIn("Estratégias 5m", tudo)
+        self.assertIn("Estratégias 5m · SIMULADO", tudo)
         self.assertIn("ORB", tudo)
         self.assertIn("sem dados", tudo)
 
