@@ -1,0 +1,6 @@
+# dados e estado gerados pelas skills
+b3/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store

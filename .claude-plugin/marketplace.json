@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "b3-trader-skill",
+  "description": "Skills do Claude para a B3",
+  "owner": {
+    "name": "Carlosvpm",
+    "url": "https://github.com/Carlosvpm"
+  },
+  "plugins": [
+    {
+      "name": "b3-trader-skill",
+      "description": "Contratos, calendário e dados do mini índice (WIN) e do mini dólar (WDO) para o Claude. Não envia ordens.",
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/Carlosvpm/b3-trader-skill"
+    }
+  ]
+}

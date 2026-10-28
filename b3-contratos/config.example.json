@@ -1,0 +1,16 @@
+{
+  "_leia": "Copie para b3/config.json e mude só o que precisar. Tudo aqui é opcional. Horários: um período por mudança da B3, cada um vale a partir de 'desde'.",
+  "rolagem_dias_uteis": {"WIN": 2, "WDO": 2},
+  "horarios": {
+    "WIN": [
+      {"desde": "2026-03-09", "abertura": "09:00", "fechamento": "18:25"}
+    ],
+    "WDO": [
+      {"desde": "2026-03-09", "abertura": "09:00", "fechamento": "18:30"}
+    ]
+  },
+  "abertura_cinzas": "13:00",
+  "_exemplo_feriados_extras": {"AAAA-MM-DD": "nome do dia sem pregão que a B3 anunciar"},
+  "feriados_extras": {},
+  "dias_com_pregao": []
+}

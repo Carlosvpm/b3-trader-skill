@@ -1,0 +1,24 @@
+{
+  "name": "b3-trader-skill",
+  "description": "Skills do Claude para operar a B3 com método: contratos e calendário do mini índice (WIN) e do mini dólar (WDO), e dados em 1, 5, 15, 30 e 60 minutos. Não envia ordens.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Carlosvpm",
+    "url": "https://github.com/Carlosvpm"
+  },
+  "homepage": "https://github.com/Carlosvpm/b3-trader-skill",
+  "repository": "https://github.com/Carlosvpm/b3-trader-skill",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "claude-skills",
+    "b3",
+    "mini-indice",
+    "mini-dolar",
+    "win",
+    "wdo",
+    "metatrader5",
+    "day-trade"
+  ],
+  "skills": "./"
+}
