@@ -15,10 +15,14 @@ Uso:
   python mt5.py simbolo WIN                       # qual código pedir ao MT5 hoje
   python mt5.py exportar WIN --de 2026-09-01 --ate 2026-10-27 [--simbolo WIN$N]
   python mt5.py ao-vivo WIN [--segundos 2]        # grava candles de 1 min fechados
+  python mt5.py cotacoes [--simbolos IBOV,WDO$N=DÓLAR,PETR4,VALE3]   # lista de monitoramento
 
 O ao-vivo escreve:
   b3/dados/WIN_1m_aovivo.csv      candles de 1 min já fechados (formato padrão)
   b3/estado/WIN_ultimo.json       último preço, bid, ask e o candle em formação
+
+O cotacoes escreve b3/estado/cotacoes.json (código, último, variação do dia),
+que a coluna do painel mostra no lugar das caixas de WIN e WDO.
 
 Horário: o MT5 devolve o horário do servidor da corretora. Nas corretoras da B3
 ele costuma ser o de Brasília. Se não for, use --fuso-servidor (horas a somar).
@@ -253,6 +257,68 @@ def cmd_ao_vivo(a):
     return 0
 
 
+MONITOR_PADRAO = ("IBOV,WDO$N=DÓLAR,PETR4,VALE3,ITUB4,BBDC4,BBAS3,B3SA3,ABEV3,"
+                  "WEGE3,ELET3,SUZB3,RENT3,PRIO3")
+
+
+def ler_lista(texto):
+    """'IBOV,WDO$N=DÓLAR' -> [('IBOV', 'IBOV'), ('WDO$N', 'DÓLAR')]"""
+    itens = []
+    for parte in texto.split(","):
+        parte = parte.strip()
+        if not parte:
+            continue
+        simb, _, rotulo = parte.partition("=")
+        itens.append((simb.strip(), (rotulo or simb).strip()))
+    return itens
+
+
+def cotacao(simbolo, rotulo, info, tick):
+    """Uma linha da lista. Variação contra o fechamento anterior (session_close)."""
+    ultimo = getattr(tick, "last", 0) or getattr(tick, "bid", 0) or None
+    anterior = getattr(info, "session_close", 0) or None
+    if ultimo and anterior:
+        variacao = (ultimo / anterior - 1) * 100
+    else:
+        variacao = getattr(info, "price_change", None) if ultimo else None
+    return {"codigo": rotulo, "simbolo": simbolo, "ultimo": ultimo, "anterior": anterior,
+            "variacao": variacao, "casas": getattr(info, "digits", 2)}
+
+
+def cmd_cotacoes(a):
+    mt5 = _mt5(a.ponte, a.host, a.porta)
+    lista = ler_lista(a.simbolos)
+    for simb, _ in lista:
+        if not mt5.symbol_select(simb, True):
+            print("aviso: %s não existe nesta corretora" % simb, file=sys.stderr)
+    destino = os.path.join("b3", "estado", "cotacoes.json")
+    os.makedirs(os.path.dirname(destino), exist_ok=True)
+    print("Cotações de %d símbolos -> %s (Ctrl+C para parar)" % (len(lista), destino))
+    try:
+        while True:
+            agora = dt.datetime.now(C.BRT).replace(tzinfo=None)
+            itens = []
+            for simb, rotulo in lista:
+                info = mt5.symbol_info(simb)
+                if info is None:
+                    continue
+                itens.append(cotacao(simb, rotulo, info, mt5.symbol_info_tick(simb)))
+            tmp = destino + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"atualizado": agora.isoformat(timespec="seconds"), "itens": itens},
+                          f, ensure_ascii=False, indent=2)
+            os.replace(tmp, destino)
+            if not a.silencioso:
+                print("%s %d cotações" % (agora.strftime("%H:%M:%S"), len(itens)))
+            aberto = C.status_pregao("WIN", agora)["aberto"]
+            time.sleep(a.segundos if aberto else max(a.segundos, 30))
+    except KeyboardInterrupt:
+        print("Encerrado.")
+    finally:
+        mt5.shutdown()
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Candles do MetaTrader 5 no formato padrão (só leitura).")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -283,6 +349,16 @@ def main(argv=None):
         else:
             s.add_argument("--segundos", type=float, default=2.0)
             s.add_argument("--silencioso", action="store_true")
+
+    s = sub.add_parser("cotacoes", help="lista de monitoramento para o painel")
+    s.add_argument("--simbolos", default=MONITOR_PADRAO,
+                   help="códigos separados por vírgula; CODIGO=RÓTULO muda o nome mostrado")
+    s.add_argument("--segundos", type=float, default=2.0)
+    s.add_argument("--silencioso", action="store_true")
+    s.add_argument("--ponte", action="store_const", const=True, default=None)
+    s.add_argument("--host")
+    s.add_argument("--porta", type=int)
+    s.set_defaults(fn=cmd_cotacoes)
 
     a = p.parse_args(argv)
     return a.fn(a)

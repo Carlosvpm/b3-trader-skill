@@ -89,6 +89,9 @@ funciona.
   O `ao-vivo` grava `b3/dados/WIN_1m_aovivo.csv` (candles fechados) e
   `b3/estado/WIN_ultimo.json` (último preço, bid, ask e o candle em formação).
   Ele usa o contrato vigente pela regra de rolagem, nunca um código fixo.
+  `python mt5.py cotacoes` grava `b3/estado/cotacoes.json` com a lista de
+  monitoramento do painel (código, último, variação contra o fechamento
+  anterior); `--simbolos IBOV,WDO$N=DÓLAR,PETR4` muda a lista.
 - **Exportação do MT5** (Ferramentas, Centro de Histórico, ou o gráfico
   exportado): `importar arquivo.csv --ativo WIN`. O formato é detectado sozinho.
 - **Exportação do Profit**: `importar arquivo.csv --ativo WIN --formato profit`

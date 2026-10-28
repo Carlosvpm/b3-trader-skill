@@ -63,6 +63,26 @@ class MT5(unittest.TestCase):
         self.assertEqual([c.abertura for c in m], [1, 9, 3])
 
 
+class Cotacoes(unittest.TestCase):
+    def test_lista_com_rotulo(self):
+        self.assertEqual(M.ler_lista("IBOV, WDO$N=DÓLAR,,PETR4"),
+                         [("IBOV", "IBOV"), ("WDO$N", "DÓLAR"), ("PETR4", "PETR4")])
+
+    def test_variacao_contra_o_fechamento_anterior(self):
+        info = type("I", (), {"session_close": 50.0, "price_change": 9.9, "digits": 2})()
+        tick = type("T", (), {"last": 51.0, "bid": 50.9})()
+        c = M.cotacao("PETR4", "PETR4", info, tick)
+        self.assertAlmostEqual(c["variacao"], 2.0)
+        self.assertEqual((c["ultimo"], c["anterior"], c["casas"]), (51.0, 50.0, 2))
+
+    def test_sem_negocio_ainda(self):
+        info = type("I", (), {"session_close": 0.0, "price_change": 0.0, "digits": 2})()
+        tick = type("T", (), {"last": 0.0, "bid": 0.0})()
+        c = M.cotacao("VALE3", "VALE3", info, tick)
+        self.assertIsNone(c["ultimo"])
+        self.assertIsNone(c["variacao"])
+
+
 class Ponte(unittest.TestCase):
     def _importar(self, disponiveis):
         class Falso(object):

@@ -76,6 +76,12 @@ segue o horário do replay), `aovivo` (lê `b3/dados/*_1m_aovivo.csv`, que o
 `b3-dados/mt5.py ao-vivo` grava), `arquivo` (redesenha os arquivos de
 `b3/dados/` a cada 2 s).
 
+Lista de monitoramento: com o `b3-dados/mt5.py cotacoes` rodando, a coluna
+troca as caixas de WIN e WDO por uma lista de código, cotação e variação do
+dia (IBOV, dólar pelo `WDO$N`, PETR4, VALE3, ITUB4... ou a lista de
+`--simbolos`). Se o arquivo parar de atualizar, o título vira "parado HH:MM:SS".
+`painel.py --monitor nao` volta às caixas.
+
 No tmux: `Ctrl+b` e depois `1`, `2` ou `3` troca de janela, `Ctrl+b d` sai e
 deixa rodando, `tmux attach -t b3` volta, `tmux kill-session -t =b3` fecha. O
 mouse troca de painel.

@@ -5,11 +5,15 @@ Mostra, para cada ativo: preço, variação, máxima e mínima do dia, se o preg
 está aberto, o contrato e a rolagem; depois a situação de cada estratégia
 (posição, ordem armada, resultado do dia) e os últimos eventos.
 
+Com b3/estado/cotacoes.json (mt5.py cotacoes) as caixas de cada ativo dão lugar
+a uma lista de monitoramento: código, cotação e variação do dia.
+
 Uso:
   python3 painel.py                         # WIN e WDO, sinais em 5 min, atualiza a cada 2 s
   python3 painel.py --ativos WIN --tf 15 --estrategias rompimento_abertura,vwap
   python3 painel.py --replay                # acompanha o replay dos gráficos
   python3 painel.py --uma-vez               # imprime uma vez e sai
+  python3 painel.py --monitor nao           # caixas de WIN e WDO mesmo com cotacoes.json
 """
 
 import argparse
@@ -48,9 +52,22 @@ def limite_replay(ativo):
         return None
 
 
-def coletar(ativos, tf, estrategias, dias, replay=False, agora=None):
+MONITOR = os.path.join("b3", "estado", "cotacoes.json")
+
+
+def ler_monitor(caminho=MONITOR):
+    try:
+        with open(caminho, encoding="utf-8") as f:
+            m = json.load(f)
+        m["atualizado"] = dt.datetime.fromisoformat(m["atualizado"])
+        return m
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def coletar(ativos, tf, estrategias, dias, replay=False, agora=None, monitor=None):
     """Junta tudo o que o painel mostra. Separado do desenho para testar."""
-    info = {"ativos": [], "eventos": [], "agora": agora}
+    info = {"ativos": [], "eventos": [], "agora": agora, "monitor": monitor}
     for ativo in ativos:
         arq = arquivo_do_ativo(ativo)
         item = {"ativo": ativo, "arquivo": arq, "estrategias": {}}
@@ -110,6 +127,44 @@ def _dur(minutos):
     return ("%dh%02d" % (h, m)) if h else ("%d min" % m)
 
 
+def _cotacao_fmt(v, casas):
+    return "-" if v is None else brl(v, casas)
+
+
+def _monitor(t, w, y, info, agora):
+    """Lista de monitoramento; devolve a próxima linha livre."""
+    m = info["monitor"]
+    pregao = next((a["pregao"] for a in info["ativos"] if a.get("pregao")), None)
+    if pregao:
+        if pregao["aberto"]:
+            x = t.texto(1, y, "● ABERTO", COR["alta"], negrito=True)
+            t.texto(x + 1, y, "fecha em %s" % _dur(pregao["minutos_para_fechar"]), COR["fraco"])
+        else:
+            x = t.texto(1, y, "● FECHADO", COR["baixa"], negrito=True)
+            prox = dt.datetime.fromisoformat(pregao["proxima_abertura"])
+            t.texto(x + 1, y, ("abre %s" % prox.strftime("%d/%m %H:%M"))[:w - x - 1], COR["fraco"])
+        y += 2
+    itens = m["itens"][:max(0, t.h - y - 6)]
+    parado = (agora - m["atualizado"]).total_seconds() > 30
+    titulo = "Monitor" + (" · parado %s" % m["atualizado"].strftime("%H:%M:%S") if parado else "")
+    t.caixa(0, y, w, y + len(itens) + 1, COR["apagado"], titulo,
+            COR["laranja"] if parado else COR["amarelo"])
+    larg_cod = max([len(i["codigo"]) for i in itens] + [5])
+    for k, i in enumerate(itens):
+        yy = y + 1 + k
+        var = i.get("variacao")
+        if var is None:
+            cor, txt_var = COR["fraco"], "-"
+        else:
+            cor = COR["alta"] if var > 0 else COR["baixa"] if var < 0 else COR["texto"]
+            txt_var = "%s%s%%" % ("▲ +" if var > 0 else "▼ " if var < 0 else "  ", brl(var, 2))
+        t.texto(2, yy, i["codigo"][:larg_cod], COR["texto"], negrito=True)
+        t.texto(w - 1 - 9, yy, txt_var.rjust(9), cor)
+        preco = _cotacao_fmt(i.get("ultimo"), min(i.get("casas", 2), 2))
+        t.texto(max(3 + larg_cod, w - 11 - len(preco)), yy, preco, cor, negrito=True)
+    return y + len(itens) + 3
+
+
 def desenhar(info, largura, altura, tf, estrategias):
     t = Tela(largura, altura)
     w = t.w - 1
@@ -122,7 +177,9 @@ def desenhar(info, largura, altura, tf, estrategias):
     if any(a.get("ficticio") for a in info["ativos"]):
         t.texto(w - 9, 0, " FICTÍCIO ", COR["preto"], bg=COR["laranja"], negrito=True)
     y = 2
-    for a in info["ativos"]:
+    if info.get("monitor"):
+        y = _monitor(t, w, y, info, agora)
+    for a in ([] if info.get("monitor") else info["ativos"]):
         if y + 6 >= t.h:
             break
         t.caixa(0, y, w, y + 6, COR["apagado"], "%s · %s" % (a["ativo"], a.get("contrato", "-")),
@@ -223,6 +280,8 @@ def main(argv=None):
     p.add_argument("--segundos", type=float, default=2.0)
     p.add_argument("--replay", action="store_true", help="segue o horário do replay dos gráficos")
     p.add_argument("--uma-vez", action="store_true")
+    p.add_argument("--monitor", choices=("auto", "sim", "nao"), default="auto",
+                   help="lista de cotações (b3/estado/cotacoes.json) no lugar das caixas dos ativos")
     p.add_argument("--largura", type=int)
     p.add_argument("--altura", type=int)
     p.add_argument("--png")
@@ -237,7 +296,10 @@ def main(argv=None):
 
     def quadro():
         w, h = tamanho_terminal(a.largura, a.altura)
-        return desenhar(coletar(ativos, a.tf, ests, a.dias, a.replay), w, h, a.tf, ests)
+        mon = None if a.monitor == "nao" or a.replay else ler_monitor()
+        if a.monitor == "sim" and mon is None:
+            mon = {"atualizado": dt.datetime.now(), "itens": []}
+        return desenhar(coletar(ativos, a.tf, ests, a.dias, a.replay, monitor=mon), w, h, a.tf, ests)
 
     try:
         if a.uma_vez or a.png:

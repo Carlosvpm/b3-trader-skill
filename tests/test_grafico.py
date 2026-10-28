@@ -134,6 +134,33 @@ class Painel(Base):
         info = P.coletar(["WIN"], 5, ["vwap"], 3, replay=True)
         self.assertEqual(info["ativos"][0]["hora"], dt.datetime(2026, 10, 27, 11, 0))
 
+    def test_monitor_no_lugar_das_caixas(self):
+        os.makedirs(os.path.join("b3", "dados"))
+        os.makedirs(os.path.join("b3", "estado"))
+        D.escrever(os.path.join("b3", "dados", "WIN_1m.csv"), self.um)
+        with open(os.path.join("b3", "estado", "cotacoes.json"), "w") as f:
+            f.write('{"atualizado": "2026-10-28T15:00:00", "itens": ['
+                    '{"codigo": "IBOV", "ultimo": 171633, "variacao": -2.32, "casas": 0},'
+                    '{"codigo": "PETR4", "ultimo": 52.48, "variacao": 0.59, "casas": 2},'
+                    '{"codigo": "VALE3", "ultimo": null, "variacao": null, "casas": 2}]}')
+        agora = dt.datetime(2026, 10, 28, 15, 0, 10)
+        info = P.coletar(["WIN"], 5, ["vwap"], 3, agora=agora, monitor=P.ler_monitor())
+        tudo = texto(P.desenhar(info, 40, 30, 5, ["vwap"]))
+        self.assertIn("Monitor", tudo)
+        self.assertNotIn("parado", tudo)
+        self.assertIn("171.633", tudo)
+        self.assertIn("52,48", tudo)
+        self.assertIn("▲ +0,59%", tudo)
+        self.assertIn("▼ -2,32%", tudo)
+        self.assertIn("● ABERTO", tudo)
+        self.assertNotIn("WIN · WINZ26", tudo)               # sem a caixa do ativo
+        self.assertIn("Estratégias 5m", tudo)
+
+    def test_monitor_parado(self):
+        info = {"ativos": [], "eventos": [], "agora": dt.datetime(2026, 10, 28, 15, 5),
+                "monitor": {"atualizado": dt.datetime(2026, 10, 28, 15, 0), "itens": []}}
+        self.assertIn("parado 15:00:00", texto(P.desenhar(info, 40, 20, 5, [])))
+
 
 if __name__ == "__main__":
     unittest.main()
