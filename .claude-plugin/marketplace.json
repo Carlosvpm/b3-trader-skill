@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "b3-trader-skill",
-      "description": "Contratos, calendário, dados, estratégias e gráfico de velas no terminal (tmux) para o mini índice (WIN) e o mini dólar (WDO). Não envia ordens.",
+      "description": "Contratos, calendário, dados, estratégias, scanner, máquina do tempo e gráfico de velas no terminal (tmux) para o mini índice (WIN) e o mini dólar (WDO). Não envia ordens.",
       "source": "./",
       "category": "productivity",
       "homepage": "https://github.com/Carlosvpm/b3-trader-skill"

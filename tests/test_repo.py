@@ -5,7 +5,7 @@ import unittest
 
 from _load import ROOT
 
-SKILLS = ["b3-contratos", "b3-dados", "b3-sinais", "b3-grafico"]
+SKILLS = ["b3-contratos", "b3-dados", "b3-sinais", "b3-scanner", "b3-timemachine", "b3-grafico"]
 
 
 def frontmatter(path):

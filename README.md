@@ -2,8 +2,9 @@
 
 Skills do Claude para operar a B3 com método, começando pelo **mini índice
 (WIN)** e pelo **mini dólar (WDO)**: regras dos contratos, dados de 1 a 60
-minutos, seis estratégias com sinais simulados e um **gráfico de velas
-colorido no terminal**, com painel no tmux.
+minutos, seis estratégias com sinais simulados, um **scanner de setups**, uma
+**máquina do tempo** que simula o seu plano em 10.000 pregões e um **gráfico de
+velas colorido no terminal**, com painel no tmux.
 
 ![Painel no tmux: WIN e WDO em 5 minutos, com a coluna de status](docs/painel.png)
 
@@ -15,7 +16,7 @@ fazer conta de cabeça.
 da visualização. A execução fica com uma plataforma da sua corretora (por
 exemplo, um robô no MetaTrader 5), sob o seu controle.
 
-> Versão 0.2. Quatro skills prontas. Os dados de teste (mock) deixam rodar tudo
+> Versão 0.3. Seis skills prontas. Os dados de teste (mock) deixam rodar tudo
 > antes de ter uma fonte real. Veja o [roteiro](#roteiro).
 
 ## As skills
@@ -25,6 +26,8 @@ exemplo, um robô no MetaTrader 5), sob o seu controle.
 | `/b3-contratos` | Contrato vigente (WINZ26, WDOX26...), vencimento, rolagem, pregão aberto ou fechado, feriados da B3 e quanto vale uma variação de pontos em reais. |
 | `/b3-dados` | Candles de WIN e WDO em 1, 5, 15, 30 e 60 min num formato único: dados fictícios para teste, importação do MetaTrader 5 e do Profit, leitura do MT5 ao vivo, validação e série contínua. |
 | `/b3-sinais` | Seis estratégias (rompimento da abertura, Setup 9.1, cruzamento de médias, VWAP, IFR2, Hi-Lo) com entrada, stop, alvo, zeragem do dia e resultado bruto em pontos e reais. Compara as estratégias lado a lado. |
+| `/b3-scanner` | Varre WIN e WDO no diário e em 5, 15 e 60 min e lista os setups do último candle fechado, para os dois lados: rompimento de N candles, bandeira, retomada da média, IFR no extremo, repique, rompimento da abertura do dia e a situação das seis estratégias. |
+| `/b3-timemachine` | Simula um plano (entrada, stop, alvo) em 10.000 pregões montados com os candles reais do ativo, sorteados pelo horário do dia: chance de alvo antes do stop, preço provável no fim, resultado médio em R e em reais, o mesmo plano nos pregões reais e um veredito. |
 | `/b3-grafico` | Gráfico de velas no terminal com volume, médias, VWAP, Hi-Lo, as entradas e saídas da estratégia e o stop e alvo da posição. Ao vivo, em replay ou como imagem. Painel completo no tmux. |
 
 Pergunte em português normal. Por exemplo:
@@ -33,6 +36,9 @@ Pergunte em português normal. Por exemplo:
 - "Gera 3 meses de dados de teste do WDO."
 - "Compara as estratégias no WIN de 15 minutos."
 - "Roda o Setup 9.1 no dólar só comprado e com validade de 3 candles."
+- "O que tem de setup agora no WIN e no WDO?"
+- "Comprei o WIN em 130.200 com stop de 300 pontos. Qual a chance de bater 2R até as 17:55?"
+- "Pega a ordem armada do Setup 9.1 e roda na máquina do tempo."
 - "Abre o painel no tmux em modo demo."
 - "Me mostra o gráfico de hoje do WIN com o Hi-Lo."
 
@@ -59,8 +65,9 @@ cp -r b3-trader-skill/b3-* ~/.claude/skills/
 Só para um projeto: copie as mesmas pastas para `.claude/skills/` dentro do
 repositório do projeto.
 
-**Copie sempre as quatro juntas.** Cada uma usa a anterior
-(`contratos` → `dados` → `sinais` → `grafico`) e procura por ela na pasta ao lado.
+**Copie sempre todas juntas.** Cada uma usa a anterior
+(`contratos` → `dados` → `sinais` → `scanner`, `timemachine` e `grafico`) e
+procura por ela na pasta ao lado.
 
 ### No app do Claude
 
@@ -93,10 +100,17 @@ python3 b3-dados/dados.py mock WDO --de 2026-08-03 --ate 2026-10-27
 # 2. as seis estratégias lado a lado
 python3 b3-sinais/sinais.py comparar b3/dados/WIN_5m.csv
 
-# 3. um gráfico no terminal
+# 3. os setups no último candle, como estavam às 10:15 do último dia
+python3 b3-scanner/scanner.py --agora "2026-10-27 10:15"
+
+# 4. a máquina do tempo para uma compra com stop de 300 pontos e alvo de 2R
+python3 b3-timemachine/timemachine.py b3/dados/WIN_5m.csv --lado compra --stop-pontos 300 --rr 2 \
+    --data 2026-10-27 --hora 10:15
+
+# 5. um gráfico no terminal
 python3 b3-grafico/grafico.py b3/dados/WIN_5m.csv -e hilo --hilo 8 --dias 1
 
-# 4. o painel completo
+# 6. o painel completo
 b3-grafico/painel.sh demo
 ```
 
@@ -156,6 +170,54 @@ A simulação é a mesma para todas: sinal no fechamento do candle, entrada no
 candle seguinte, stop conta antes do alvo quando os dois cabem no mesmo candle,
 sem entrada depois das 17:30, posição zerada às 17:55 e resultado **bruto**,
 sem custos. Um teste garante que nenhuma estratégia olha para o futuro.
+
+## O scanner
+
+```bash
+python3 b3-scanner/scanner.py                         # WIN e WDO, diário + 5, 15 e 60 min
+python3 b3-scanner/scanner.py --aovivo --tfs 5,15     # com o MT5 alimentando
+python3 b3-scanner/scanner.py --setups rompimento,orb -p rompimento_n=30
+python3 b3-scanner/scanner.py listar
+```
+
+| setup | alta | baixa |
+| --- | --- | --- |
+| `rompimento` | fecha acima da máxima dos 20 candles anteriores | fecha abaixo da mínima |
+| `bandeira` | mastro de 3 ATRs, depois 5 candles apertados sem devolver metade | o espelho |
+| `retomada_media` | volta acima da média de 20 | perde a média |
+| `ifr_extremo` | IFR14 abaixo de 30 | acima de 70 |
+| `repique` | IFR estava abaixo de 30 e fechou subindo | acima de 70 e fechou caindo |
+| `orb` | candle de 5 min fecha acima da faixa dos primeiros 15 min de hoje | fecha abaixo |
+| `estrategias` | posição, ordem armada, sinal ou saída de cada estratégia da `b3-sinais` | |
+
+Só conta o **último candle fechado**: o candle em formação fica de fora, e o
+diário só entra com o pregão completo. `--agora "AAAA-MM-DD HH:MM"` revê um
+momento do passado sem olhar o futuro. Se o pregão está aberto e o dado parou,
+ele avisa. A lista vai para `b3/scanner/varredura.json` e, quando o setup tem
+stop, vem com a linha pronta para a máquina do tempo.
+
+## A máquina do tempo
+
+```bash
+python3 b3-timemachine/timemachine.py b3/dados/WIN_5m.csv --lado venda --entrada 130250 \
+    --stop 130500 --alvo 129800 --data 2026-10-30 --hora 10:30
+python3 b3-timemachine/timemachine.py b3/dados/WIN_5m.csv --de-sinal b3/sinais/WIN_5m_setup_9_1.json
+```
+
+Pega os últimos 60 pregões completos antes do dia do plano, guarda cada candle
+como razões do fechamento anterior e monta 10.000 pregões novos sorteando, para
+cada horário, um candle real do mesmo horário (± 2 candles). Conta stop antes
+do alvo no mesmo candle e sai no preço do gap quando o stop é pulado.
+Mostra:
+
+- alvo primeiro, stop primeiro, nenhum até as 17:55 e quantos terminaram no verde;
+- o preço provável às 17:55 (mediana e faixa de 90%);
+- o resultado médio em R, em pontos e em reais por contrato (bruto);
+- o mesmo plano nos 60 pregões reais, entrando no mesmo horário;
+- um veredito: a chance de alvo antes do stop contra o empate de 1 em (1 + RR).
+
+A semente é fixa, então o mesmo plano dá o mesmo número. `--gravar` salva o
+leque de preços, 160 caminhos e o histograma em `b3/timemachine/`.
 
 ## Dados reais pelo MetaTrader 5
 
@@ -268,7 +330,7 @@ marcados assim. A B3 muda o horário algumas vezes por ano: ajuste em
 ## Roteiro
 
 ```
-contratos -> dados -> sinais -> grafico
+contratos -> dados -> sinais -> scanner / timemachine / grafico
                          \-> backtest -> risco -> ponte -> (robô na sua plataforma)
 ```
 
@@ -277,6 +339,8 @@ contratos -> dados -> sinais -> grafico
 | `b3-contratos` | pronta | regras, calendário, rolagem e valor do ponto |
 | `b3-dados` | pronta | mock, importação, MT5, validação e série contínua |
 | `b3-sinais` | pronta | seis estratégias, sinais e resultado bruto |
+| `b3-scanner` | pronta | setups no último candle, nos dois lados, em vários tempos gráficos |
+| `b3-timemachine` | pronta | o seu plano em 10.000 pregões simulados e nos pregões reais |
 | `b3-grafico` | pronta | velas no terminal, replay, ao vivo e painel no tmux |
 | `b3-backtest` | planejada | resultado líquido com corretagem, emolumentos e slippage, por período |
 | `b3-risco` | planejada | perda máxima no dia, limite de contratos, janela de horário e margem |
@@ -316,15 +380,20 @@ corretora antes de operar.
 ## Arquivos
 
 ```
-b3-contratos/   SKILL.md, contratos.py, config.example.json
-b3-dados/       SKILL.md, dados.py, mt5.py
-b3-sinais/      SKILL.md, sinais.py, indicadores.py, estrategias.example.json
-b3-grafico/     SKILL.md, grafico.py, painel.py, painel.sh, tela.py
-tests/          testes unittest + exemplos de exportação do MT5 e do Profit
-tools/          captura_tmux.py (imagens do README)
-docs/           imagens
-.claude-plugin/ manifesto do plugin para o Claude Code
+b3-contratos/    SKILL.md, contratos.py, config.example.json
+b3-dados/        SKILL.md, dados.py, mt5.py
+b3-sinais/       SKILL.md, sinais.py, indicadores.py, estrategias.example.json
+b3-scanner/      SKILL.md, scanner.py
+b3-timemachine/  SKILL.md, timemachine.py
+b3-grafico/      SKILL.md, grafico.py, painel.py, painel.sh, tela.py
+tests/           testes unittest + exemplos de exportação do MT5 e do Profit
+tools/           captura_tmux.py (imagens do README)
+docs/            imagens
+.claude-plugin/  manifesto do plugin para o Claude Code
 ```
 
-Inspirado na estrutura do [trader-skill](https://github.com/Jakeschincariol/trader-skill).
+Inspirado na estrutura do [trader-skill](https://github.com/Jakeschincariol/trader-skill);
+o scanner e a máquina do tempo partem das ideias do
+[day-trader-skill](https://github.com/Jakeschincariol/day-trader-skill), adaptadas
+para futuros da B3.
 MIT. Feito por [Carlosvpm](https://github.com/Carlosvpm).
