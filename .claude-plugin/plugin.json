@@ -1,7 +1,7 @@
 {
   "name": "b3-trader-skill",
-  "description": "Skills do Claude para operar a B3 com método: contratos e calendário do mini índice (WIN) e do mini dólar (WDO), dados em 1 a 60 minutos (mock, MetaTrader 5, Profit), seis estratégias com sinais simulados e gráfico de velas colorido no terminal com painel no tmux. Não envia ordens.",
-  "version": "0.2.0",
+  "description": "Skills do Claude para operar a B3 com método: contratos e calendário do mini índice (WIN) e do mini dólar (WDO), dados em 1 a 60 minutos (mock, MetaTrader 5, Profit), seis estratégias com sinais simulados, scanner de setups, máquina do tempo (simulação de Monte Carlo do plano) e gráfico de velas colorido no terminal com painel no tmux. Não envia ordens.",
+  "version": "0.3.0",
   "author": {
     "name": "Carlosvpm",
     "url": "https://github.com/Carlosvpm"
@@ -21,7 +21,9 @@
     "day-trade",
     "tmux",
     "candlestick",
-    "estrategias"
+    "estrategias",
+    "scanner",
+    "monte-carlo"
   ],
   "skills": "./"
 }
